@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  # baseimage-alpine:
+  #   build:
+  #     context: ..
+  #     dockerfile: ./.devcontainer/images/dockerfile.base-alpine
+  #   image: homelab:base-alpine
+  #   # This service doesn't need to run a container, so we use a no-op command.
+  #   command: echo "Base alpine image built."
+
+  baseimage-debian:
+    build:
+      context: ..
+      dockerfile: ./.devcontainer/images/dockerfile.base-debian
+    image: homelab:base-debian
+    # This service doesn't need to run a container, so we use a no-op command.
+    command: echo "Base debian image built."
+
+  code:
+    depends_on:
+      - baseimage-debian
+    build:
+      context: ..
+      dockerfile: ./.devcontainer/images/dockerfile.code
+    volumes:
+      - type: bind
+        source: ${HOME}/.gitconfig
+        target: /root/.gitconfig
+        read_only: true
+      - ../:/repo
+      - node_modules:/repo/node_modules
+      - pnpm_9_store:/repo/.pnpm-store
+      - pnpm_9_store:/workspaces/homelab/.pnpm-store
+
+volumes:
+  node_modules:
+  pnpm_9_store:

@@ -1,0 +1,22 @@
+###############################################################################
+#
+# Build step: base
+#
+###############################################################################
+
+# Use an official Node.js runtime as a parent image
+FROM homelab:base-debian as base
+
+# Install curl, unzip, zsh, and git (required for nvm and oh-my-zsh installation)
+RUN apt-get install -y gh
+
+
+###############################################################################
+#
+# Build step: final
+#
+###############################################################################
+
+WORKDIR /repo
+
+ENTRYPOINT pnpm install && /bin/sh -c "while sleep 1000; do :; done"
