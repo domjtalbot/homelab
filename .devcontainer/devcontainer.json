@@ -1,0 +1,30 @@
+{
+  "name": "homelab",
+  "initializeCommand": "./.devcontainer/scripts/initialize.sh",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "code",
+  "workspaceFolder": "/repo",
+  "forwardPorts": [4200],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "christian-kohler.npm-intellisense",
+        "dbaeumer.vscode-eslint",
+        "EditorConfig.EditorConfig",
+        "esbenp.prettier-vscode",
+        "firsttris.vscode-jest-runner",
+        "ms-azuretools.vscode-docker",
+        "ms-playwright.playwright",
+        "nrwl.angular-console",
+        "philfontaine.autolaunch",
+        "redhat.vscode-yaml",
+        "SonarSource.sonarlint-vscode",
+        "Tyriar.sort-lines",
+        "VisualStudioExptTeam.vscodeintellicode"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/zsh"
+      }
+    }
+  }
+}

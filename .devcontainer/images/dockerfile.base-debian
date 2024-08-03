@@ -1,0 +1,45 @@
+###############################################################################
+#
+# Build step: base
+#
+###############################################################################
+
+# Use an official Node.js runtime as a parent image
+FROM node:slim as base
+
+# Install curl, unzip, zsh, and git (required for nvm and oh-my-zsh installation)
+RUN apt-get update && apt-get install -y curl unzip zsh git
+
+# Install nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+ENV NVM_DIR /root/.nvm
+
+# Install oh-my-zsh
+RUN sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+# Install Corepack
+RUN npm install -g corepack
+
+# Set the working directory in the container to /repo
+WORKDIR /repo
+
+
+###############################################################################
+#
+# Build step: node
+#
+###############################################################################
+
+# Start a new build stage
+FROM base as node-install
+
+# Copy the .nvmrc file into the Docker image
+COPY .nvmrc .
+COPY package.json .
+
+# Install and use the Node.js version specified in the .nvmrc file
+RUN . "$NVM_DIR/nvm.sh" && nvm install && nvm use
+
+# Enable Corepack
+RUN corepack enable
+RUN pnpm version
