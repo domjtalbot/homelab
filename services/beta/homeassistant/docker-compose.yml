@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  haas:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: haas${CONTAINER_NAME_SUFFIX}
+    ports:
+      - 8123:8123
+    volumes:
+      - ./.homelab/config:/config
+      - ./config/configuration.yaml:/config/configuration.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    labels:
+      - homepage.group=${HOMEPAGE_GROUP:-Home}
+      - homepage.name=Home Assistant
+      - homepage.icon=home-assistant.png
+      - homepage.href=https://haas.${HOMELAB_DOMAIN}
+      - homepage.description=Home Assistant
+      # - homepage.widget.type=homeassistant
+      # - homepage.widget.url=https://haas.${HOMELAB_DOMAIN}
+      # - homepage.widget.username=${TRAEFIK_DASHBOARD_USERNAME}
+      # - homepage.widget.password=${TRAEFIK_DASHBOARD_PASSWORD}
+      - traefik.enable=true
+      - traefik.http.routers.haas.rule=Host(`haas.${HOMELAB_DOMAIN}`)
+      - traefik.http.routers.haas.entrypoints=https
+      - traefik.http.routers.haas.tls=true
+      - traefik.http.services.haas.loadbalancer.server.port=8123
