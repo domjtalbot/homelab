@@ -87,6 +87,8 @@ main() {
     load_env $current_dir
     start_services "$current_dir/services"
     start_services "$current_dir/services/beta"
+    docker container prune -f
+    docker image prune -f
 }
 
 main

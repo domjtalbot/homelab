@@ -26,4 +26,4 @@ services:
       - traefik.http.routers.metube.rule=Host(`metube.${HOMELAB_DOMAIN}`)
       - traefik.http.routers.metube.entrypoints=https
       - traefik.http.routers.metube.tls=true
-      - traefik.http.services.metube.loadbalancer.server.port=8085
+      - traefik.http.services.metube.loadbalancer.server.port=8081
