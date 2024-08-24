@@ -1,0 +1,37 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/latest/configs/settings
+
+title: HomeLab
+theme: dark # or light
+headerStyle: clean
+hideVersion: true
+hideErrors: true
+
+background: 
+  image: https://images.unsplash.com/photo-1571691345097-630b077a4a2a?q=80&w=1539&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D
+  blur: sm # sm, "", md, xl... see https://tailwindcss.com/docs/backdrop-blur
+  saturate: 50 # 0, 50, 100... see https://tailwindcss.com/docs/backdrop-saturate
+  brightness: 50 # 0, 50, 75... see https://tailwindcss.com/docs/backdrop-brightness
+  opacity: 50 # 0-100
+
+iconStyle: gradient
+statusStyle: "dot"
+
+
+layout:
+  Home:
+    style: row
+    columns: 3
+  Media:
+    style: row
+    columns: 3
+  DNS:
+    style: row
+    columns: 3
+  Network:
+    style: row
+    columns: 4
+  Beta:
+    style: row
+    columns: 4

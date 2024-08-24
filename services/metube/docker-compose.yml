@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  metube:
+    image: ghcr.io/alexta69/metube
+    container_name: metube
+    env_file:
+      - ../../.env
+      # - ./.env
+      # - .homelab/.env
+    environment:
+      - DEFAULT_THEME=dark
+      - PUBLIC_HOST_URL=https://metube.${HOMELAB_DOMAIN}
+      - YTDL_OPTIONS={}
+    ports:
+      - 8085:8081
+    volumes:
+      - /Volumes/Files/Downloads:/downloads
+    restart: unless-stopped
+    labels:
+      - homepage.group=Media
+      - homepage.name=MeTube
+      - homepage.icon=youtube.png
+      - homepage.href=https://metube.${HOMELAB_DOMAIN}
+      - traefik.enable=true
+      - traefik.http.routers.metube.rule=Host(`metube.${HOMELAB_DOMAIN}`)
+      - traefik.http.routers.metube.entrypoints=https
+      - traefik.http.routers.metube.tls=true
+      - traefik.http.services.metube.loadbalancer.server.port=8085
