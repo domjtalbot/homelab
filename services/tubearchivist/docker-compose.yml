@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  tubearchivist:
+    image: bbilly1/tubearchivist:latest
+    container_name: tubearchivist${CONTAINER_NAME_SUFFIX}
+    env_file:
+      - ../../.env
+      - ../.env
+      - .homelab/.env
+    environment:
+      - ES_URL=http://archivist-es:9200
+      - REDIS_HOST=archivist-redis
+      - HOST_UID=${PUID}
+      - HOST_GID=${PGID}
+      - TA_HOST=tubearchivist.${HOMELAB_DOMAIN}
+    ports:
+      - 8086:8000
+    volumes:
+      - ./.homelab/cache:/cache
+      - /Volumes/Media/YouTube:/youtube
+    restart: unless-stopped
+    labels:
+      - homepage.group=${HOMEPAGE_GROUP:-Media}
+      - homepage.name=TubeArchivist
+      - homepage.icon=youtube.png
+      - homepage.href=https://tubearchivist.${HOMELAB_DOMAIN}
+      - traefik.enable=true
+      - traefik.http.routers.tubearchivist.rule=Host(`tubearchivist.${HOMELAB_DOMAIN}`)
+      - traefik.http.routers.tubearchivist.entrypoints=https
+      - traefik.http.routers.tubearchivist.tls=true
+      - traefik.http.services.tubearchivist.loadbalancer.server.port=8000
+
+  archivist-redis:
+    image: redis/redis-stack-server:latest
+    container_name: archivist-redis${CONTAINER_NAME_SUFFIX}
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - ./.homelab/redis:/data
+    depends_on:
+      - archivist-es
+
+  archivist-es:
+    image: bbilly1/tubearchivist-es:latest
+    container_name: archivist-es${CONTAINER_NAME_SUFFIX}
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+      - ../.env
+      - .homelab/.env
+    environment:
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=true
+      - discovery.type=single-node
+      - path.repo=/usr/share/elasticsearch/data/snapshot
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./.homelab/elasticsearch/data:/usr/share/elasticsearch/data
+    expose:
+      - 9200
