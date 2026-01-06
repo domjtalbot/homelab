@@ -1,4 +1,4 @@
-version: "3.8"
+
 
 services:
   tdarr:
@@ -8,27 +8,17 @@ services:
       - 8265:8265 # webUI port
       - 8266:8266 # server port
     volumes:
-      - ./.homelab/configs:/app/configs
-      - ./.homelab/logs:/app/logs
-      - ./.homelab/server:/app/server
-      - ./.homelab/transcode_cache:/temp
+      - ../../.homelab/tdarr/configs:/app/configs
+      - ../../.homelab/tdarr/logs:/app/logs
+      - ../../.homelab/tdarr/server:/app/server
+      - ../../.homelab/tdarr/transcode_cache:/temp
       - /Volumes/Media:/media
     restart: unless-stopped
+    env_file:
+      - ../../.env
     environment:
       - internalNode=true
       - inContainer=true
       - ffmpegVersion=6
       - nodeName=MyInternalNode
-    labels:
-      - homepage.group=Media
-      - homepage.name=Tdarr
-      - homepage.icon=tdarr.png
-      - homepage.href=https://tdarr.${HOMELAB_DOMAIN}
-      - homepage.widget.type=tdarr
-      - homepage.widget.url=https://tdarr.${HOMELAB_DOMAIN}
-      - homepage.widget.fields=["queue","processed","saved"]
-      - traefik.enable=true
-      - traefik.http.routers.tdarr.rule=Host(`tdarr.${HOMELAB_DOMAIN}`)
-      - traefik.http.routers.tdarr.entrypoints=https
-      - traefik.http.routers.tdarr.tls=true
-      - traefik.http.services.tdarr.loadbalancer.server.port=8265
+
