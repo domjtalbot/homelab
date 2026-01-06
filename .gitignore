@@ -42,5 +42,14 @@ Thumbs.db
 .nx/workspace-data
 .pnpm-store
 
-.homelab
-.env.local
+# Ignore secrets and local configs
+.env
+.env.*
+!.env.example
+.homelab/
+*.local
+*.log
+node_modules/
+.DS_Store
+services/*/.env
+services/*/.env.*

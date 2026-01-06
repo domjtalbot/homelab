@@ -1,0 +1,52 @@
+# Makefile for Homelab Docker Services
+#
+# Manages all Docker Compose services in the 'services/' directory.
+# If SERVICE is omitted or set to 'all', the command applies to all services.
+
+SERVICES := $(shell find services -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/docker-compose.yml' \; -print | xargs -n1 basename)
+COMPOSE_ENV_FILES = --env-file .env
+
+# Macro: Run a docker compose command for a given service and arguments
+DOCKER_COMPOSE_CMD = docker compose $(COMPOSE_ENV_FILES) -f services/$(1)/docker-compose.yml $(2)
+ALL_SERVICES = [ "$(SERVICE)" = "all" ] || [ -z "$(SERVICE)" ]
+
+# Macro: Run a docker compose command for all services or a specific one
+run-all-or-one = \
+	if $(ALL_SERVICES); then \
+	  for s in $(SERVICES); do \
+	    $(call DOCKER_COMPOSE_CMD,$$s,$(1)); \
+	  done; \
+	else \
+	  $(call DOCKER_COMPOSE_CMD,$(SERVICE),$(1)); \
+	fi
+
+down:
+	@$(call run-all-or-one,down)
+
+logs:
+	@$(call run-all-or-one,logs -f)
+
+ps:
+	@$(call run-all-or-one,ps)
+
+prune:
+	@docker container prune -f
+	@docker image prune -f
+
+restart:
+	@$(call run-all-or-one,restart)
+	
+up:
+	@$(MAKE) prune
+	@$(call run-all-or-one,up -d)
+
+help:
+	@echo "Available commands:"
+	@echo "  make down [SERVICE=name|all]    Stop all or a specific service"
+	@echo "  make help                       Show this help message"
+	@echo "  make logs [SERVICE=name|all]    View logs for all or a specific service"
+	@echo "  make ps [SERVICE=name|all]      Show status for all or a specific service"
+	@echo "  make prune                      Remove unused containers and images"
+	@echo "  make restart [SERVICE=name|all] Restart all or a specific service"
+	@echo "  make up [SERVICE=name|all]      Start all or a specific service"
+
