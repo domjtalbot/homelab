@@ -3,7 +3,7 @@
 services:
   metube:
     image: ghcr.io/alexta69/metube
-    container_name: metube
+    container_name: ${STACK_NAME_PREFIX}-metube
     env_file:
       - ../../.env
     environment:

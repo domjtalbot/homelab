@@ -3,11 +3,12 @@
 # Manages all Docker Compose services in the 'services/' directory.
 # If SERVICE is omitted or set to 'all', the command applies to all services.
 
+STACK_NAME_PREFIX := $(shell grep '^STACK_NAME_PREFIX=' .env | cut -d= -f2)
 SERVICES := $(shell find services -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/docker-compose.yml' \; -print | xargs -n1 basename)
 COMPOSE_ENV_FILES = --env-file .env
 
-# Macro: Run a docker compose command for a given service and arguments
-DOCKER_COMPOSE_CMD = docker compose $(COMPOSE_ENV_FILES) -f services/$(1)/docker-compose.yml $(2)
+# Macro: Run a docker compose command for a given service and arguments, with COMPOSE_PROJECT_NAME
+DOCKER_COMPOSE_CMD = COMPOSE_PROJECT_NAME=$(STACK_NAME_PREFIX)-$(1) docker compose $(COMPOSE_ENV_FILES) -f services/$(1)/docker-compose.yml $(2)
 ALL_SERVICES = [ "$(SERVICE)" = "all" ] || [ -z "$(SERVICE)" ]
 
 # Macro: Run a docker compose command for all services or a specific one
@@ -33,6 +34,11 @@ prune:
 	@docker container prune -f
 	@docker image prune -f
 
+clean:
+	@docker container rm -f $$(docker ps -aq --filter "name=$(STACK_NAME_PREFIX)") 2>/dev/null || true
+	@docker volume rm $$(docker volume ls -q --filter "name=$(STACK_NAME_PREFIX)") 2>/dev/null || true
+	@docker network rm $$(docker network ls -q --filter "name=$(STACK_NAME_PREFIX)") 2>/dev/null || true
+
 restart:
 	@$(call run-all-or-one,restart)
 	
@@ -40,13 +46,22 @@ up:
 	@$(MAKE) prune
 	@$(call run-all-or-one,up -d)
 
+status:
+	@docker ps --filter "name=$(STACK_NAME_PREFIX)" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+
+check-env:
+	@python3 scripts/check_env.py .env.example .env
+
 help:
 	@echo "Available commands:"
-	@echo "  make down [SERVICE=name|all]    Stop all or a specific service"
+	@echo "  make check-env                  Validate .env against .env.example"
+	@echo "  make clean                      Remove stopped containers, volumes, and networks for this stack"
+	@echo "  make down [SERVICE=name|all]    Stop all or a specific service (only for this stack)"
 	@echo "  make help                       Show this help message"
 	@echo "  make logs [SERVICE=name|all]    View logs for all or a specific service"
 	@echo "  make ps [SERVICE=name|all]      Show status for all or a specific service"
-	@echo "  make prune                      Remove unused containers and images"
+	@echo "  make prune                      Remove unused containers and images (only for this stack)"
 	@echo "  make restart [SERVICE=name|all] Restart all or a specific service"
+	@echo "  make status                     Show running containers for this stack"
 	@echo "  make up [SERVICE=name|all]      Start all or a specific service"
 
