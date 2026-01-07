@@ -3,7 +3,7 @@
 services:
   portainer:
     image: portainer/portainer-ce:latest
-    container_name: portainer
+    container_name: ${STACK_NAME_PREFIX}-portainer
     env_file:
       - ../../.env
     ports:
