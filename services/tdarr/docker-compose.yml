@@ -1,5 +1,3 @@
-
-
 services:
   tdarr:
     image: ghcr.io/haveagitgat/tdarr:latest
@@ -15,7 +13,7 @@ services:
       - /Volumes/Media:/media
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ../../.env.tdarr
     environment:
       - internalNode=true
       - inContainer=true

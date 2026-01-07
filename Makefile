@@ -40,9 +40,11 @@ clean:
 	@docker network rm $$(docker network ls -q --filter "name=$(STACK_NAME_PREFIX)") 2>/dev/null || true
 
 restart:
+	@$(MAKE) check-env
 	@$(call run-all-or-one,restart)
 	
 up:
+	@$(MAKE) check-env
 	@$(MAKE) prune
 	@$(call run-all-or-one,up -d)
 
@@ -51,6 +53,47 @@ status:
 
 check-env:
 	@python3 scripts/check_env.py .env.example .env
+	@for s in $(SERVICES); do \
+	  example="services/$$s/.env.$$s.example"; \
+	  target=".env.$$s"; \
+	  if [ -f $$example ] && [ -f $$target ]; then \
+	    python3 scripts/check_env.py $$example $$target; \
+	  fi; \
+	done
+
+init:
+	@if [ -f .env.example ]; then \
+	  if [ -f .env ]; then \
+	    read -p ".env already exists. Overwrite? [y/N] " ans; \
+	    if [ "$$ans" = "y" ] || [ "$$ans" = "Y" ]; then \
+	      cp .env.example .env; \
+	      echo "Copied .env.example to .env"; \
+	    else \
+	      echo "Skipped .env"; \
+	    fi; \
+	  else \
+	    cp .env.example .env; \
+	    echo "Copied .env.example to .env"; \
+	  fi; \
+	fi; \
+	for s in $(SERVICES); do \
+	  example="services/$$s/.env.$$s.example"; \
+	  target=".env.$$s"; \
+	  if [ -f $$example ]; then \
+	    if [ -f $$target ]; then \
+	      read -p "$$target already exists. Overwrite? [y/N] " ans; \
+	      if [ "$$ans" = "y" ] || [ "$$ans" = "Y" ]; then \
+	        cp $$example $$target; \
+	        echo "Copied $$example to $$target"; \
+	      else \
+	        echo "Skipped $$target"; \
+	      fi; \
+	    else \
+	      cp $$example $$target; \
+	      echo "Copied $$example to $$target"; \
+	    fi; \
+	  fi; \
+	done
 
 help:
 	@echo "Available commands:"
@@ -58,6 +101,7 @@ help:
 	@echo "  make clean                      Remove stopped containers, volumes, and networks for this stack"
 	@echo "  make down [SERVICE=name|all]    Stop all or a specific service (only for this stack)"
 	@echo "  make help                       Show this help message"
+	@echo "  make init                       Copy all .env.example and .env.(service).example files to root, with prompts"
 	@echo "  make logs [SERVICE=name|all]    View logs for all or a specific service"
 	@echo "  make ps [SERVICE=name|all]      Show status for all or a specific service"
 	@echo "  make prune                      Remove unused containers and images (only for this stack)"
