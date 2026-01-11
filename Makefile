@@ -44,6 +44,7 @@ restart:
 	@$(call run-all-or-one,restart)
 	
 up:
+	@$(MAKE) create-missing-env
 	@$(MAKE) check-env
 	@$(MAKE) prune
 	@$(call run-all-or-one,up -d)
@@ -58,6 +59,16 @@ check-env:
 	  target=".env.$$s"; \
 	  if [ -f $$example ] && [ -f $$target ]; then \
 	    python3 scripts/check_env.py $$example $$target; \
+	  fi; \
+	done
+
+create-missing-env:
+	@for s in $(SERVICES); do \
+	  example="services/$$s/.env.$$s.example"; \
+	  target=".env.$$s"; \
+	  if [ -f $$example ] && [ ! -f $$target ]; then \
+	    cp $$example $$target; \
+	    echo "Created $$target from $$example"; \
 	  fi; \
 	done
 
@@ -97,15 +108,16 @@ init:
 
 help:
 	@echo "Available commands:"
-	@echo "  make check-env                  Validate .env against .env.example"
-	@echo "  make clean                      Remove stopped containers, volumes, and networks for this stack"
-	@echo "  make down [SERVICE=name|all]    Stop all or a specific service (only for this stack)"
-	@echo "  make help                       Show this help message"
-	@echo "  make init                       Copy all .env.example and .env.(service).example files to root, with prompts"
-	@echo "  make logs [SERVICE=name|all]    View logs for all or a specific service"
-	@echo "  make ps [SERVICE=name|all]      Show status for all or a specific service"
-	@echo "  make prune                      Remove unused containers and images (only for this stack)"
-	@echo "  make restart [SERVICE=name|all] Restart all or a specific service"
-	@echo "  make status                     Show running containers for this stack"
-	@echo "  make up [SERVICE=name|all]      Start all or a specific service"
+	@echo "  make check-env                     Validate .env against .env.example"
+	@echo "  make clean                         Remove stopped containers, volumes, and networks for this stack"
+	@echo "  make create-missing-env            Create missing .env files from .env.example files (without overwriting)"
+	@echo "  make down [SERVICE=name|all]       Stop all or a specific service (only for this stack)"
+	@echo "  make help                          Show this help message"
+	@echo "  make init                          Copy all .env.example and .env.(service).example files to root, with prompts"
+	@echo "  make logs [SERVICE=name|all]       View logs for all or a specific service"
+	@echo "  make ps [SERVICE=name|all]         Show status for all or a specific service"
+	@echo "  make prune                         Remove unused containers and images (only for this stack)"
+	@echo "  make restart [SERVICE=name|all]    Restart all or a specific service"
+	@echo "  make status                        Show running containers for this stack"
+	@echo "  make up [SERVICE=name|all]         Start all or a specific service (auto-creates missing .env files)"
 
