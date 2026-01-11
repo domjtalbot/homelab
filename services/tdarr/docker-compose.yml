@@ -6,10 +6,10 @@ services:
       - 8265:8265 # webUI port
       - 8266:8266 # server port
     volumes:
-      - ../../.homelab/tdarr/configs:/app/configs
-      - ../../.homelab/tdarr/logs:/app/logs
-      - ../../.homelab/tdarr/server:/app/server
-      - ../../.homelab/tdarr/transcode_cache:/temp
+      - tdarr_configs:/app/configs
+      - tdarr_logs:/app/logs
+      - tdarr_server:/app/server
+      - tdarr_transcode_cache:/temp
       - /Volumes/Media:/media
     restart: unless-stopped
     env_file:
@@ -25,4 +25,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  tdarr_configs:
+  tdarr_logs:
+  tdarr_server:
+  tdarr_transcode_cache:
 
