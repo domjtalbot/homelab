@@ -5,10 +5,13 @@
 
 STACK_NAME_PREFIX := $(shell grep '^STACK_NAME_PREFIX=' .env | cut -d= -f2)
 SERVICES := $(shell find services -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/docker-compose.yml' \; -print | xargs -n1 basename)
-COMPOSE_ENV_FILES = --env-file .env
+
+# Macro: Build env-file flags for a service (root .env + service-specific .env.<service>)
+# Uses shell conditional to check for service-specific env file at runtime
+COMPOSE_ENV_FILES = --env-file .env $$(if [ -f .env.$(1) ]; then echo "--env-file .env.$(1)"; fi)
 
 # Macro: Run a docker compose command for a given service and arguments, with COMPOSE_PROJECT_NAME
-DOCKER_COMPOSE_CMD = COMPOSE_PROJECT_NAME=$(STACK_NAME_PREFIX)-$(1) docker compose $(COMPOSE_ENV_FILES) -f services/$(1)/docker-compose.yml $(2)
+DOCKER_COMPOSE_CMD = COMPOSE_PROJECT_NAME=$(STACK_NAME_PREFIX)-$(1) docker compose $(call COMPOSE_ENV_FILES,$(1)) -f services/$(1)/docker-compose.yml $(2)
 ALL_SERVICES = [ "$(SERVICE)" = "all" ] || [ -z "$(SERVICE)" ]
 
 # Macro: Run a docker compose command for all services or a specific one

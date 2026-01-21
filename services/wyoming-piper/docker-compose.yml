@@ -1,0 +1,21 @@
+services:
+  wyoming-piper:
+    image: rhasspy/wyoming-piper:latest
+    container_name: ${STACK_NAME_PREFIX}-wyoming-piper
+    env_file:
+      - ../../.env.wyoming-piper
+    ports:
+      - "10200:10200"
+    volumes:
+      - wyoming_piper_data:/data
+    command: ["--voice", "${PIPER_VOICE}", "--data-dir", "/data", "--download-dir", "/data", "--update-voices"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; s=socket.socket(); s.connect(('localhost',10200)); s.close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  wyoming_piper_data:
