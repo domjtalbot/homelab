@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  web-check:
+    image: lissy93/web-check:latest
+    container_name: homelab-web-check
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - WEB_CHECK_CONFIG=/config/config.yaml
+    volumes:
+      - ./config:/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
