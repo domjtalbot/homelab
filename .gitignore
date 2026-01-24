@@ -41,7 +41,7 @@ Thumbs.db
 .nx/cache
 .nx/workspace-data
 .pnpm-store
-
+logs
 # Ignore secrets and local configs
 .env
 .env.*

@@ -1,17 +1,24 @@
-version: '3.8'
 services:
   web-check:
     image: lissy93/web-check:latest
-    container_name: homelab-web-check
+    container_name: ${STACK_NAME_PREFIX}-web-check
+    env_file:
+      - ../../.env.web-check
+    labels:
+      - homepage.group=Tools
+      - homepage.name=Web Check
+      - homepage.icon=web-check.png
+      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${WEB_CHECK_WEB_PORT:-3000}
+      - homepage.description=Website analysis tool
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "${WEB_CHECK_WEB_PORT:-3000}:3000"
     environment:
       - WEB_CHECK_CONFIG=/config/config.yaml
     volumes:
       - ./config:/config
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/status"]
       interval: 30s
       timeout: 10s
       retries: 5

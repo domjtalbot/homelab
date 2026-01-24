@@ -1,0 +1,13 @@
+# Information widgets
+# See: https://gethomepage.dev/widgets/info/
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: long
+      timeStyle: short
+      hourCycle: h23

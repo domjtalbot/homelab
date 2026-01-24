@@ -2,8 +2,14 @@ services:
   open-webui:
     image: ghcr.io/open-webui/open-webui:v0.7.2
     container_name: ${STACK_NAME_PREFIX}-open-webui
+    labels:
+      - homepage.group=AI & Automation
+      - homepage.name=Open WebUI
+      - homepage.icon=open-webui.png
+      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${OPEN_WEBUI_WEB_PORT:-8080}
+      - homepage.description=LLM chat interface
     ports:
-      - "3000:8080"
+      - "${OPEN_WEBUI_WEB_PORT:-8080}:8080"
     env_file:
       - ../../.env.open-webui
     volumes:
