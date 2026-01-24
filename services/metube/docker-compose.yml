@@ -5,11 +5,18 @@ services:
     env_file:
       - ../../.env.metube
     labels:
+      # Homepage
       - homepage.group=Media
       - homepage.name=MeTube
       - homepage.icon=youtube.png
-      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${METUBE_WEB_PORT:-8081}
+      - homepage.href=https://${METUBE_SUBDOMAIN:-metube}.${BASE_DOMAIN}
       - homepage.description=YouTube video downloader
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.metube.rule=Host(`${METUBE_SUBDOMAIN:-metube}.${BASE_DOMAIN}`)
+      - traefik.http.routers.metube.entrypoints=websecure
+      - traefik.http.routers.metube.tls.certresolver=cloudflare
+      - traefik.http.services.metube.loadbalancer.server.port=8081
     environment:
       - DEFAULT_THEME=dark
       - YTDL_OPTIONS={}
@@ -17,6 +24,8 @@ services:
       - ${METUBE_WEB_PORT:-8081}:8081
     volumes:
       - /Volumes/Media/downloads:/downloads
+    networks:
+      - traefik
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/"]
@@ -24,3 +33,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+networks:
+  traefik:
+    external: true

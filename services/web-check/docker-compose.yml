@@ -5,11 +5,18 @@ services:
     env_file:
       - ../../.env.web-check
     labels:
+      # Homepage
       - homepage.group=Tools
       - homepage.name=Web Check
       - homepage.icon=web-check.png
-      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${WEB_CHECK_WEB_PORT:-3000}
+      - homepage.href=https://${WEB_CHECK_SUBDOMAIN:-webcheck}.${BASE_DOMAIN}
       - homepage.description=Website analysis tool
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.web-check.rule=Host(`${WEB_CHECK_SUBDOMAIN:-webcheck}.${BASE_DOMAIN}`)
+      - traefik.http.routers.web-check.entrypoints=websecure
+      - traefik.http.routers.web-check.tls.certresolver=cloudflare
+      - traefik.http.services.web-check.loadbalancer.server.port=3000
     restart: unless-stopped
     ports:
       - "${WEB_CHECK_WEB_PORT:-3000}:3000"
@@ -17,9 +24,15 @@ services:
       - WEB_CHECK_CONFIG=/config/config.yaml
     volumes:
       - ./config:/config
+    networks:
+      - traefik
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/status"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 10s
+
+networks:
+  traefik:
+    external: true

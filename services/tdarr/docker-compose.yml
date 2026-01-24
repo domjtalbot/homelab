@@ -3,11 +3,18 @@ services:
     image: ghcr.io/haveagitgat/tdarr:latest
     container_name: ${STACK_NAME_PREFIX}-tdarr
     labels:
+      # Homepage
       - homepage.group=Media
       - homepage.name=Tdarr
       - homepage.icon=tdarr.png
-      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${TDARR_WEB_PORT:-8265}
+      - homepage.href=https://${TDARR_SUBDOMAIN:-tdarr}.${BASE_DOMAIN}
       - homepage.description=Media transcoding automation
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.tdarr.rule=Host(`${TDARR_SUBDOMAIN:-tdarr}.${BASE_DOMAIN}`)
+      - traefik.http.routers.tdarr.entrypoints=websecure
+      - traefik.http.routers.tdarr.tls.certresolver=cloudflare
+      - traefik.http.services.tdarr.loadbalancer.server.port=8265
     ports:
       - ${TDARR_WEB_PORT:-8265}:8265 # webUI port
       - ${TDARR_SERVER_PORT:-8266}:8266 # server port
@@ -17,6 +24,8 @@ services:
       - tdarr_server:/app/server
       - tdarr_transcode_cache:/temp
       - /Volumes/Media:/media
+    networks:
+      - traefik
     restart: unless-stopped
     env_file:
       - ../../.env.tdarr
@@ -31,6 +40,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+networks:
+  traefik:
+    external: true
 
 volumes:
   tdarr_configs:
