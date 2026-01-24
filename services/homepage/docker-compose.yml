@@ -7,7 +7,7 @@ services:
     labels:
       # Traefik
       - traefik.enable=true
-      - traefik.http.routers.homepage.rule=Host(`${HOMEPAGE_SUBDOMAIN:-home}.${BASE_DOMAIN}`)
+      - traefik.http.routers.homepage.rule=Host(`${BASE_DOMAIN}`)
       - traefik.http.routers.homepage.entrypoints=websecure
       - traefik.http.routers.homepage.tls.certresolver=cloudflare
       - traefik.http.services.homepage.loadbalancer.server.port=3000
@@ -18,7 +18,7 @@ services:
       - homepage_logs:/app/config/logs
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS}
+      - HOMEPAGE_ALLOWED_HOSTS=${BASE_DOMAIN}
     networks:
       - traefik
     restart: unless-stopped
