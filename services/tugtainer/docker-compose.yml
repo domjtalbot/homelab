@@ -3,19 +3,32 @@ services:
     image: quenary/tugtainer:latest
     container_name: ${STACK_NAME_PREFIX}-tugtainer
     labels:
+      # Homepage
       - homepage.group=Infrastructure
       - homepage.name=Tugtainer
       - homepage.icon=docker.png
-      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${TUGTAINER_WEB_PORT:-80}
+      - homepage.href=https://${TUGTAINER_SUBDOMAIN:-tugtainer}.${BASE_DOMAIN}
       - homepage.description=Docker image updater
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.tugtainer.rule=Host(`${TUGTAINER_SUBDOMAIN:-tugtainer}.${BASE_DOMAIN}`)
+      - traefik.http.routers.tugtainer.entrypoints=websecure
+      - traefik.http.routers.tugtainer.tls.certresolver=cloudflare
+      - traefik.http.services.tugtainer.loadbalancer.server.port=80
     restart: unless-stopped
     ports:
       - "${TUGTAINER_WEB_PORT:-80}:80"
     volumes:
       - tugtainer_data:/tugtainer
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - traefik
     env_file:
       - ../../.env.tugtainer
+
+networks:
+  traefik:
+    external: true
 
 volumes:
   tugtainer_data:

@@ -4,6 +4,13 @@ services:
     container_name: ${STACK_NAME_PREFIX}-homepage
     env_file:
       - ../../.env.homepage
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.homepage.rule=Host(`${HOMEPAGE_SUBDOMAIN:-home}.${BASE_DOMAIN}`)
+      - traefik.http.routers.homepage.entrypoints=websecure
+      - traefik.http.routers.homepage.tls.certresolver=cloudflare
+      - traefik.http.services.homepage.loadbalancer.server.port=3000
     ports:
       - "${HOMEPAGE_WEB_PORT:-3000}:3000"
     volumes:
@@ -12,6 +19,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS}
+    networks:
+      - traefik
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
@@ -19,6 +28,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+networks:
+  traefik:
+    external: true
 
 volumes:
     homepage_logs:

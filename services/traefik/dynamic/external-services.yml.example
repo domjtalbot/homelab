@@ -1,0 +1,33 @@
+# Example: Proxying to services on other hosts/IPs
+# Copy this to external-services.yml and customize
+#
+# http:
+#   routers:
+#     # Example: Proxying to a NAS web interface
+#     nas:
+#       rule: "Host(`nas.home.example.com`)"
+#       entryPoints:
+#         - websecure
+#       tls:
+#         certResolver: cloudflare
+#       service: nas
+#
+#     # Example: Proxying to Home Assistant on another machine
+#     homeassistant:
+#       rule: "Host(`ha.home.example.com`)"
+#       entryPoints:
+#         - websecure
+#       tls:
+#         certResolver: cloudflare
+#       service: homeassistant
+#
+#   services:
+#     nas:
+#       loadBalancer:
+#         servers:
+#           - url: "http://192.168.1.100:5000"
+#
+#     homeassistant:
+#       loadBalancer:
+#         servers:
+#           - url: "http://192.168.1.50:8123"
