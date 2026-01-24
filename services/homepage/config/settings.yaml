@@ -1,0 +1,27 @@
+# Homepage settings
+# See: https://gethomepage.dev/configs/settings/
+title: Homelab Dashboard
+
+background:
+  opacity: 50
+
+cardBlur: md
+
+theme: dark
+color: slate
+
+useEqualHeights: true
+
+layout:
+  Media:
+    style: row
+    columns: 3
+  Infrastructure:
+    style: row
+    columns: 3
+  AI & Automation:
+    style: row
+    columns: 3
+  Tools:
+    style: row
+    columns: 3

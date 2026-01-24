@@ -4,8 +4,14 @@ services:
     container_name: ${STACK_NAME_PREFIX}-portainer
     env_file:
       - ../../.env.portainer
+    labels:
+      - homepage.group=Infrastructure
+      - homepage.name=Portainer
+      - homepage.icon=portainer.png
+      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${PORTAINER_WEB_PORT:-9000}
+      - homepage.description=Docker management UI
     ports:
-      - 9000:9000
+      - ${PORTAINER_WEB_PORT:-9000}:9000
     volumes:
       - portainer_data:/data
       - /var/run/docker.sock:/var/run/docker.sock

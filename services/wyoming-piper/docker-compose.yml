@@ -2,6 +2,11 @@ services:
   wyoming-piper:
     image: rhasspy/wyoming-piper:latest
     container_name: ${STACK_NAME_PREFIX}-wyoming-piper
+    labels:
+      - homepage.group=AI & Automation
+      - homepage.name=Wyoming Piper
+      - homepage.icon=home-assistant.png
+      - homepage.description=Text-to-speech service
     env_file:
       - ../../.env.wyoming-piper
     ports:

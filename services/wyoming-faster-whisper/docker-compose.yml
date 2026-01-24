@@ -5,6 +5,11 @@ services:
       dockerfile: Dockerfile
     image: wyoming-faster-whisper:local
     container_name: ${STACK_NAME_PREFIX}-wyoming-faster-whisper
+    labels:
+      - homepage.group=AI & Automation
+      - homepage.name=Wyoming Whisper
+      - homepage.icon=home-assistant.png
+      - homepage.description=Speech-to-text service
     env_file:
       - ../../.env.wyoming-faster-whisper
     ports:

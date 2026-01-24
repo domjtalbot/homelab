@@ -2,8 +2,14 @@ services:
   n8n:
     image: n8nio/n8n:latest
     container_name: ${STACK_NAME_PREFIX}-n8n
+    labels:
+      - homepage.group=AI & Automation
+      - homepage.name=n8n
+      - homepage.icon=n8n.png
+      - homepage.href=http://${HOMEPAGE_HOST:-localhost}:${N8N_WEB_PORT:-5678}
+      - homepage.description=Workflow automation
     ports:
-      - "5678:5678"
+      - "${N8N_WEB_PORT:-5678}:5678"
     env_file:
       - ../../.env.n8n
     volumes:
