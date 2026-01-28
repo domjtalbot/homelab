@@ -1,0 +1,13 @@
+# Traefik hooks
+# Only define hooks here - docker commands are handled by the root Taskfile
+
+version: '3'
+
+tasks:
+  pre-up:
+    desc: Create traefik network if it doesn't exist
+    status:
+      - docker network inspect traefik >/dev/null 2>&1
+    cmds:
+      - echo "Creating traefik network..."
+      - docker network create traefik

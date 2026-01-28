@@ -1,0 +1,393 @@
+# Taskfile for Homelab Docker Services
+# https://taskfile.dev
+#
+# Auto-discovers services from the 'services/' directory.
+# No need to update this file when adding new services.
+# Service-specific hooks (pre-up, pre-down, pre-restart) can be defined in services/<name>/Taskfile.yml
+
+version: '3'
+
+# Clean visual feedback without output prefix interference
+dotenv: ['.env']
+
+vars:
+  # Auto-discover services (directories with docker-compose.yml)
+  SERVICES:
+    sh: find services -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/docker-compose.yml' \; -print | xargs -n1 basename | tr '\n' ' '
+  SERVICE: '{{.SERVICE | default "all"}}'
+  STACK_NAME_PREFIX: homelab
+
+tasks:
+  default:
+    desc: Show available commands
+    cmds:
+      - task --list
+
+  #
+  # Service Lifecycle Commands
+  # These are the main user-facing commands for managing services
+  #
+
+  up:
+    desc: Start all or a specific service (SERVICE=name)
+    silent: true
+    deps:
+      - task: create-missing-env
+        silent: true
+      - task: check-env
+        silent: true
+      - task: prune
+        silent: true
+      - task: _pre-up
+        silent: true
+    cmds:
+      - task: _compose-up
+
+  down:
+    desc: Stop all or a specific service (SERVICE=name)
+    silent: true
+    deps:
+      - task: _pre-down
+        silent: true
+    cmds:
+      - task: _compose-down
+
+  restart:
+    desc: Restart all or a specific service (SERVICE=name)
+    silent: true
+    deps:
+      - task: check-env
+        silent: true
+      - task: _pre-restart
+        silent: true
+    cmds:
+      - task: _compose-restart
+
+  logs:
+    desc: View logs for a service (SERVICE=name required)
+    silent: true
+    cmds:
+      - task: _compose-logs
+
+  ps:
+    desc: Show status for all or a specific service (SERVICE=name)
+    silent: true
+    cmds:
+      - task: _compose-ps
+
+  #
+  # Maintenance Commands
+  # These help keep your Docker environment clean
+  #
+
+  prune:
+    desc: Remove unused containers and images
+    silent: true
+    cmds:
+      - docker container prune -f > /dev/null 2>&1
+      - docker image prune -f > /dev/null 2>&1
+
+  clean:
+    desc: Remove all stack containers, volumes, and networks
+    cmds:
+      - docker container rm -f $(docker ps -aq --filter "name={{.STACK_NAME_PREFIX}}") 2>/dev/null || true
+      - docker volume rm $(docker volume ls -q --filter "name={{.STACK_NAME_PREFIX}}") 2>/dev/null || true
+      - docker network rm $(docker network ls -q --filter "name={{.STACK_NAME_PREFIX}}") 2>/dev/null || true
+
+  status:
+    desc: Show running containers for this stack
+    cmds:
+      - docker ps --filter "name={{.STACK_NAME_PREFIX}}" --format 'table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Ports}}`}}'
+
+  #
+  # Environment Management
+  # These tasks handle .env file creation and validation
+  #
+
+  check-env:
+    desc: Validate .env files against .env.example
+    silent: true
+    cmds:
+      - python3 scripts/check_env.py .env.example .env > /dev/null 2>&1 || (python3 scripts/check_env.py .env.example .env && exit 1)
+      - |
+        for s in {{.SERVICES}}; do
+          example="services/$s/.env.$s.example"
+          target=".env.$s"
+          if [ -f "$example" ] && [ -f "$target" ]; then
+            python3 scripts/check_env.py "$example" "$target" > /dev/null 2>&1 || (python3 scripts/check_env.py "$example" "$target" && exit 1)
+          fi
+        done
+
+  create-missing-env:
+    desc: Create missing .env files from examples
+    silent: true
+    cmds:
+      - |
+        for s in {{.SERVICES}}; do
+          example="services/$s/.env.$s.example"
+          target=".env.$s"
+          if [ -f "$example" ] && [ ! -f "$target" ]; then
+            cp "$example" "$target"
+            echo "✓ Created $target from $example"
+          fi
+        done
+
+  init:
+    desc: Initialize all .env files (with prompts)
+    cmds:
+      - |
+        if [ -f .env.example ]; then
+          if [ -f .env ]; then
+            read -p ".env exists. Overwrite? [y/N] " ans
+            [ "$ans" = "y" ] || [ "$ans" = "Y" ] && cp .env.example .env && echo "Created .env"
+          else
+            cp .env.example .env && echo "Created .env"
+          fi
+        fi
+      - |
+        for s in {{.SERVICES}}; do
+          example="services/$s/.env.$s.example"
+          target=".env.$s"
+          if [ -f "$example" ]; then
+            if [ -f "$target" ]; then
+              read -p "$target exists. Overwrite? [y/N] " ans
+              [ "$ans" = "y" ] || [ "$ans" = "Y" ] && cp "$example" "$target" && echo "Created $target"
+            else
+              cp "$example" "$target" && echo "Created $target"
+            fi
+          fi
+        done
+
+  #
+  # Internal Tasks
+  # These are hidden helper tasks that follow the Single Responsibility Principle
+  # Each task does one thing well, making the codebase easier to maintain
+  #
+  # Design Decision: We use separate tasks instead of parameterized ones because
+  # Taskfile's variable passing has limitations. This trade-off provides reliability
+  # at the cost of some repetition, which we minimize with shell functions.
+  #
+
+  # Pre-hook tasks - run service-specific setup before main action
+  # These allow services to execute custom logic (e.g., network creation)
+  _pre-up:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        for service in {{.SERVICES}}; do
+          if [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ]; then continue; fi
+          if [ -f "services/$service/Taskfile.yml" ] && grep -q "^  pre-up:" "services/$service/Taskfile.yml" 2>/dev/null; then
+            printf "\033[36m⏳\033[0m  \033[1m%s\033[0m (pre-up hook)..." "$service"
+            if (cd "services/$service" && task pre-up > /dev/null 2>&1); then
+              printf "\r\033[32m✓\033[0m  \033[1m%s\033[0m (pre-up hook)    \n" "$service"
+            else
+              printf "\r\033[31m✗\033[0m  \033[1m%s\033[0m (pre-up hook) \033[31m(FAILED)\033[0m\n" "$service"
+              exit 1
+            fi
+          fi
+        done
+
+  _pre-down:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        for service in {{.SERVICES}}; do
+          if [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ]; then continue; fi
+          if [ -f "services/$service/Taskfile.yml" ] && grep -q "^  pre-down:" "services/$service/Taskfile.yml" 2>/dev/null; then
+            printf "\033[36m⏳\033[0m  \033[1m%s\033[0m (pre-down hook)..." "$service"
+            if (cd "services/$service" && task pre-down > /dev/null 2>&1); then
+              printf "\r\033[32m✓\033[0m  \033[1m%s\033[0m (pre-down hook)    \n" "$service"
+            else
+              printf "\r\033[31m✗\033[0m  \033[1m%s\033[0m (pre-down hook) \033[31m(FAILED)\033[0m\n" "$service"
+              exit 1
+            fi
+          fi
+        done
+
+  _pre-restart:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        for service in {{.SERVICES}}; do
+          if [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ]; then continue; fi
+          if [ -f "services/$service/Taskfile.yml" ] && grep -q "^  pre-restart:" "services/$service/Taskfile.yml" 2>/dev/null; then
+            printf "\033[36m⏳\033[0m  \033[1m%s\033[0m (pre-restart hook)..." "$service"
+            if (cd "services/$service" && task pre-restart > /dev/null 2>&1); then
+              printf "\r\033[32m✓\033[0m  \033[1m%s\033[0m (pre-restart hook)    \n" "$service"
+            else
+              printf "\r\033[31m✗\033[0m  \033[1m%s\033[0m (pre-restart hook) \033[31m(FAILED)\033[0m\n" "$service"
+              exit 1
+            fi
+          fi
+        done
+
+  # Docker Compose command tasks
+  # These execute docker compose operations with proper environment and project naming
+  # Visual Feedback: Progress indicators with checkmark on success, cross on error
+  _compose-up:
+    internal: true
+    silent: true
+    label: 'Starting services'
+    cmds:
+      - |
+        compose_exec() {
+          local service=$1
+          local cmd=$2
+          
+          # Show in-progress indicator
+          printf "\033[36m⏳\033[0m  \033[1m%s\033[0m..." "$service"
+          
+          # Prepare environment flags
+          local env_flags="--env-file .env"
+          [ -f ".env.$service" ] && env_flags="$env_flags --env-file .env.$service"
+          
+          # Execute command with error capture
+          local output
+          local exit_code
+          output=$(COMPOSE_PROJECT_NAME="{{.STACK_NAME_PREFIX}}-$service" docker compose $env_flags -f "services/$service/docker-compose.yml" $cmd 2>&1)
+          exit_code=$?
+          
+          # Show result
+          if [ $exit_code -eq 0 ]; then
+            printf "\r\033[32m✓\033[0m  \033[1m%s\033[0m    \n" "$service"
+            # Only show output if there are warnings
+            echo "$output" | grep -v "No services to build" | grep -v "Pulling" | grep -v "Waiting" | grep -v "Creating" | grep -v "Starting" | grep -v "Created" | grep -v "Started" | grep -E "(WARN|WARNING)" || true
+          else
+            printf "\r\033[31m✗\033[0m  \033[1m%s\033[0m \033[31m(FAILED)\033[0m\n" "$service"
+            echo ""
+            echo "\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ERROR DETAILS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo "\033[33mService:\033[0m $service"
+            echo "\033[33mCommand:\033[0m docker compose $cmd"
+            echo "\033[33mOutput:\033[0m"
+            echo "$output"
+            echo "\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo ""
+            return $exit_code
+          fi
+        }
+        
+        for service in {{.SERVICES}}; do
+          [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ] && continue
+          compose_exec "$service" "up -d" || exit 1
+        done
+
+  _compose-down:
+    internal: true
+    silent: true
+    label: 'Stopping services'
+    cmds:
+      - |
+        compose_exec() {
+          local service=$1
+          local cmd=$2
+          
+          printf "\033[36m⏳\033[0m  \033[1m%s\033[0m..." "$service"
+          
+          local env_flags="--env-file .env"
+          [ -f ".env.$service" ] && env_flags="$env_flags --env-file .env.$service"
+          
+          local output
+          local exit_code
+          output=$(COMPOSE_PROJECT_NAME="{{.STACK_NAME_PREFIX}}-$service" docker compose $env_flags -f "services/$service/docker-compose.yml" $cmd 2>&1)
+          exit_code=$?
+          
+          if [ $exit_code -eq 0 ]; then
+            printf "\r\033[32m✓\033[0m  \033[1m%s\033[0m    \n" "$service"
+          else
+            printf "\r\033[31m✗\033[0m  \033[1m%s\033[0m \033[31m(FAILED)\033[0m\n" "$service"
+            echo ""
+            echo "\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ERROR DETAILS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo "\033[33mService:\033[0m $service"
+            echo "\033[33mCommand:\033[0m docker compose $cmd"
+            echo "\033[33mOutput:\033[0m"
+            echo "$output"
+            echo "\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo ""
+            return $exit_code
+          fi
+        }
+        
+        for service in {{.SERVICES}}; do
+          [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ] && continue
+          compose_exec "$service" "down" || exit 1
+        done
+
+  _compose-restart:
+    internal: true
+    silent: true
+    label: 'Restarting services'
+    cmds:
+      - |
+        compose_exec() {
+          local service=$1
+          local cmd=$2
+          
+          printf "\033[36m⏳\033[0m  \033[1m%s\033[0m..." "$service"
+          
+          local env_flags="--env-file .env"
+          [ -f ".env.$service" ] && env_flags="$env_flags --env-file .env.$service"
+          
+          local output
+          local exit_code
+          output=$(COMPOSE_PROJECT_NAME="{{.STACK_NAME_PREFIX}}-$service" docker compose $env_flags -f "services/$service/docker-compose.yml" $cmd 2>&1)
+          exit_code=$?
+          
+          if [ $exit_code -eq 0 ]; then
+            printf "\r\033[32m✓\033[0m  \033[1m%s\033[0m    \n" "$service"
+          else
+            printf "\r\033[31m✗\033[0m  \033[1m%s\033[0m \033[31m(FAILED)\033[0m\n" "$service"
+            echo ""
+            echo "\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ERROR DETAILS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo "\033[33mService:\033[0m $service"
+            echo "\033[33mCommand:\033[0m docker compose $cmd"
+            echo "\033[33mOutput:\033[0m"
+            echo "$output"
+            echo "\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo ""
+            return $exit_code
+          fi
+        }
+        
+        for service in {{.SERVICES}}; do
+          [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ] && continue
+          compose_exec "$service" "restart" || exit 1
+        done
+
+  _compose-logs:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        compose_exec() {
+          local service=$1
+          local cmd=$2
+          echo "→ $service"
+          local env_flags="--env-file .env"
+          [ -f ".env.$service" ] && env_flags="$env_flags --env-file .env.$service"
+          COMPOSE_PROJECT_NAME="{{.STACK_NAME_PREFIX}}-$service" docker compose $env_flags -f "services/$service/docker-compose.yml" $cmd || exit 1
+        }
+        for service in {{.SERVICES}}; do
+          [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ] && continue
+          compose_exec "$service" "logs -f"
+        done
+
+  _compose-ps:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        compose_exec() {
+          local service=$1
+          local cmd=$2
+          echo "→ $service"
+          local env_flags="--env-file .env"
+          [ -f ".env.$service" ] && env_flags="$env_flags --env-file .env.$service"
+          COMPOSE_PROJECT_NAME="{{.STACK_NAME_PREFIX}}-$service" docker compose $env_flags -f "services/$service/docker-compose.yml" $cmd || exit 1
+        }
+        for service in {{.SERVICES}}; do
+          [ "{{.SERVICE}}" != "all" ] && [ "$service" != "{{.SERVICE}}" ] && continue
+          compose_exec "$service" "ps"
+        done
