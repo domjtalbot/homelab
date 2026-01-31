@@ -1,0 +1,44 @@
+services:
+  ofelia:
+    image: mcuadros/ofelia:latest
+    container_name: ${STACK_NAME_PREFIX:-homelab}-ofelia
+    command: ["daemon", "--docker"]
+    env_file:
+      - ../../.env
+      - ../../.env.ofelia
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  ofelia-status:
+    image: busybox:1.36
+    container_name: ${STACK_NAME_PREFIX:-homelab}-ofelia-status
+    command: ["httpd", "-f", "-p", "${OFELIA_STATUS_PORT}", "-h", "/web"]
+    labels:
+      # Homepage
+      - homepage.group=Ops
+      - homepage.name=Cron Status
+      - homepage.icon=docker.png
+      - homepage.href=https://${OFELIA_STATUS_SUBDOMAIN:-cron-status}.${BASE_DOMAIN}
+      - homepage.description=Backup job status JSON
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.ofelia-status.rule=Host(`${OFELIA_STATUS_SUBDOMAIN:-cron-status}.${BASE_DOMAIN}`)
+      - traefik.http.routers.ofelia-status.entrypoints=websecure
+      - traefik.http.routers.ofelia-status.tls.certresolver=cloudflare
+      - traefik.http.services.ofelia-status.loadbalancer.server.port=${OFELIA_STATUS_PORT}
+    volumes:
+      - ${CRON_STATUS_HOST_DIR}:/web:ro
+    networks:
+      - traefik
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:${OFELIA_STATUS_PORT}/" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  traefik:
+    external: true
