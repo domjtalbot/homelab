@@ -1,0 +1,41 @@
+services:
+  wyoming-faster-whisper:
+    build:
+      context: https://github.com/rhasspy/wyoming-faster-whisper.git
+      dockerfile: Dockerfile
+    image: wyoming-faster-whisper:local
+    container_name: ${STACK_NAME_PREFIX}-wyoming-faster-whisper
+    labels:
+      - homepage.group=AI & Automation
+      - homepage.name=Wyoming Whisper
+      - homepage.icon=home-assistant.png
+      - homepage.description=Speech-to-text service
+    env_file:
+      - ../../.env.wyoming-faster-whisper
+    ports:
+      - "10300:10300"
+    volumes:
+      - wyoming_faster_whisper_data:/data
+    command:
+      [
+        "--model", "${FASTER_WHISPER_MODEL}",
+        "--language", "${FASTER_WHISPER_LANGUAGE}",
+        "--beam-size", "${FASTER_WHISPER_BEAM_SIZE}",
+        "--cpu-threads", "${FASTER_WHISPER_CPU_THREADS}",
+        "--compute-type", "${FASTER_WHISPER_COMPUTE_TYPE}",
+        "--vad-filter",
+        "--vad-threshold", "${FASTER_WHISPER_VAD_THRESHOLD}",
+        "--vad-min-speech-ms", "${FASTER_WHISPER_VAD_MIN_SPEECH_MS}",
+        "--vad-min-silence-ms", "${FASTER_WHISPER_VAD_MIN_SILENCE_MS}",
+        "--data-dir", "/data"
+      ]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; s=socket.socket(); s.connect(('localhost',10300)); s.close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  wyoming_faster_whisper_data:

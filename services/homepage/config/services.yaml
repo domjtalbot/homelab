@@ -1,31 +1,23 @@
----
-# For configuration options and examples, please see:
-# https://gethomepage.dev/latest/configs/services
+# Services are auto-discovered via Docker labels
+# You can also manually define services here
+# See: https://gethomepage.dev/configs/services/
 
-- DNS:
-  - Heimdall:
-      icon: pi-hole.png
-      href: http://{{HOMEPAGE_VAR_HEIMDALL_IP}}/admin
-      widget:
-        type: pihole
-        url: http://{{HOMEPAGE_VAR_HEIMDALL_IP}}
-        key: {{HOMEPAGE_VAR_HEIMDALL_API_KEY}}
-        fields: ["queries", "blocked", "blocked_percent"]
-
-  - Thor:
-      icon: pi-hole.png
-      href: http://{{HOMEPAGE_VAR_THOR_IP}}/admin
-      widget:
-        type: pihole
-        url: http://{{HOMEPAGE_VAR_THOR_IP}}
-        key: {{HOMEPAGE_VAR_THOR_API_KEY}}
-        fields: ["queries", "blocked", "blocked_percent"]
-
-  - Loki:
-      icon: pi-hole.png
-      href: http://{{HOMEPAGE_VAR_LOKI_IP}}/admin
-      widget:
-        type: pihole
-        url: http://{{HOMEPAGE_VAR_LOKI_IP}}
-        key: {{HOMEPAGE_VAR_LOKI_API_KEY}}
-        fields: ["queries", "blocked", "blocked_percent"]
+- Cron:
+    - Vault Daily:
+        icon: vault.png
+        href: "{{HOMEPAGE_VAR_CRON_STATUS_URL}}/vault-daily.json"
+        ping: "{{HOMEPAGE_VAR_CRON_STATUS_INTERNAL_URL}}/vault-daily.json"
+        statusStyle: dot
+        description: Daily snapshot
+    - Vault Weekly:
+        icon: vault.png
+        href: "{{HOMEPAGE_VAR_CRON_STATUS_URL}}/vault-weekly.json"
+        ping: "{{HOMEPAGE_VAR_CRON_STATUS_INTERNAL_URL}}/vault-weekly.json"
+        statusStyle: dot
+        description: Weekly snapshot
+    - Vault Monthly:
+        icon: vault.png
+        href: "{{HOMEPAGE_VAR_CRON_STATUS_URL}}/vault-monthly.json"
+        ping: "{{HOMEPAGE_VAR_CRON_STATUS_INTERNAL_URL}}/vault-monthly.json"
+        statusStyle: dot
+        description: Monthly snapshot

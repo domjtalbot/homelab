@@ -1,0 +1,41 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.7.2
+    container_name: ${STACK_NAME_PREFIX}-open-webui
+    labels:
+      # Homepage
+      - homepage.group=AI & Automation
+      - homepage.name=Open WebUI
+      - homepage.icon=open-webui.png
+      - homepage.href=https://${OPEN_WEBUI_SUBDOMAIN:-chat}.${BASE_DOMAIN}
+      - homepage.description=LLM chat interface
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.open-webui.rule=Host(`${OPEN_WEBUI_SUBDOMAIN:-chat}.${BASE_DOMAIN}`)
+      - traefik.http.routers.open-webui.entrypoints=websecure
+      - traefik.http.routers.open-webui.tls.certresolver=cloudflare
+      - traefik.http.services.open-webui.loadbalancer.server.port=8080
+    ports:
+      - "${OPEN_WEBUI_WEB_PORT:-8080}:8080"
+    env_file:
+      - ../../.env.open-webui
+    volumes:
+      - open-webui_data:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - traefik
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  open-webui_data:

@@ -1,34 +1,53 @@
-version: "3.8"
-
 services:
   tdarr:
     image: ghcr.io/haveagitgat/tdarr:latest
-    container_name: tdarr
+    container_name: ${STACK_NAME_PREFIX}-tdarr
+    labels:
+      # Homepage
+      - homepage.group=Media
+      - homepage.name=Tdarr
+      - homepage.icon=tdarr.png
+      - homepage.href=https://${TDARR_SUBDOMAIN:-tdarr}.${BASE_DOMAIN}
+      - homepage.description=Media transcoding automation
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.tdarr.rule=Host(`${TDARR_SUBDOMAIN:-tdarr}.${BASE_DOMAIN}`)
+      - traefik.http.routers.tdarr.entrypoints=websecure
+      - traefik.http.routers.tdarr.tls.certresolver=cloudflare
+      - traefik.http.services.tdarr.loadbalancer.server.port=8265
     ports:
-      - 8265:8265 # webUI port
-      - 8266:8266 # server port
+      - ${TDARR_WEB_PORT:-8265}:8265 # webUI port
+      - ${TDARR_SERVER_PORT:-8266}:8266 # server port
     volumes:
-      - ./.homelab/configs:/app/configs
-      - ./.homelab/logs:/app/logs
-      - ./.homelab/server:/app/server
-      - ./.homelab/transcode_cache:/temp
+      - tdarr_configs:/app/configs
+      - tdarr_logs:/app/logs
+      - tdarr_server:/app/server
+      - tdarr_transcode_cache:/temp
       - /Volumes/Media:/media
+    networks:
+      - traefik
     restart: unless-stopped
+    env_file:
+      - ../../.env.tdarr
     environment:
       - internalNode=true
       - inContainer=true
       - ffmpegVersion=6
       - nodeName=MyInternalNode
-    labels:
-      - homepage.group=Media
-      - homepage.name=Tdarr
-      - homepage.icon=tdarr.png
-      - homepage.href=https://tdarr.${HOMELAB_DOMAIN}
-      - homepage.widget.type=tdarr
-      - homepage.widget.url=https://tdarr.${HOMELAB_DOMAIN}
-      - homepage.widget.fields=["queue","processed","saved"]
-      - traefik.enable=true
-      - traefik.http.routers.tdarr.rule=Host(`tdarr.${HOMELAB_DOMAIN}`)
-      - traefik.http.routers.tdarr.entrypoints=https
-      - traefik.http.routers.tdarr.tls=true
-      - traefik.http.services.tdarr.loadbalancer.server.port=8265
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8265"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  tdarr_configs:
+  tdarr_logs:
+  tdarr_server:
+  tdarr_transcode_cache:
+

@@ -1,0 +1,89 @@
+services:
+  linkwarden:
+    image: ghcr.io/linkwarden/linkwarden:latest
+    container_name: ${STACK_NAME_PREFIX:-homelab}-linkwarden
+    labels:
+      # Homepage
+      - homepage.group=Tools
+      - homepage.name=Linkwarden
+      - homepage.icon=linkwarden.png
+      - homepage.href=https://${LINKWARDEN_SUBDOMAIN:-linkwarden}.${BASE_DOMAIN}
+      - homepage.description=Collaborative bookmark manager
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.linkwarden.rule=Host(`${LINKWARDEN_SUBDOMAIN:-linkwarden}.${BASE_DOMAIN}`)
+      - traefik.http.routers.linkwarden.entrypoints=websecure
+      - traefik.http.routers.linkwarden.tls.certresolver=cloudflare
+      - traefik.http.services.linkwarden.loadbalancer.server.port=3000
+    ports:
+      - "${LINKWARDEN_WEB_PORT:-3003}:3000"
+    env_file:
+      - ../../.env.linkwarden
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@linkwarden-postgres:5432/linkwarden
+      - MEILI_HOST=http://linkwarden-meilisearch:7700
+    volumes:
+      - linkwarden_data:/data/data
+    networks:
+      - traefik
+      - linkwarden-internal
+    depends_on:
+      linkwarden-postgres:
+        condition: service_healthy
+      linkwarden-meilisearch:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  linkwarden-postgres:
+    image: postgres:16-alpine
+    container_name: ${STACK_NAME_PREFIX:-homelab}-linkwarden-postgres
+    env_file:
+      - ../../.env.linkwarden
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=linkwarden
+    volumes:
+      - linkwarden_pgdata:/var/lib/postgresql/data
+    networks:
+      - linkwarden-internal
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d linkwarden" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  linkwarden-meilisearch:
+    image: getmeili/meilisearch:v1.12.8
+    container_name: ${STACK_NAME_PREFIX:-homelab}-linkwarden-meilisearch
+    env_file:
+      - ../../.env.linkwarden
+    volumes:
+      - linkwarden_meilidata:/meili_data
+    networks:
+      - linkwarden-internal
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:7700/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  traefik:
+    external: true
+  linkwarden-internal:
+    driver: bridge
+
+volumes:
+  linkwarden_data:
+  linkwarden_pgdata:
+  linkwarden_meilidata:

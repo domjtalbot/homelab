@@ -1,0 +1,59 @@
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: ${STACK_NAME_PREFIX:-homelab}-vault
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /backups /cron-status && chown -R vault:vault /vault/raft /vault/audit && exec su-exec vault vault server -config=/vault/config/vault.hcl"]
+    labels:
+      # Homepage
+      - homepage.group=Security
+      - homepage.name=Vault
+      - homepage.icon=vault.png
+      - homepage.href=https://${VAULT_SUBDOMAIN:-vault}.${BASE_DOMAIN}
+      - homepage.description=Secrets management and encryption
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.vault.rule=Host(`${VAULT_SUBDOMAIN:-vault}.${BASE_DOMAIN}`)
+      - traefik.http.routers.vault.entrypoints=websecure
+      - traefik.http.routers.vault.tls.certresolver=cloudflare
+      - traefik.http.services.vault.loadbalancer.server.port=8200
+      # Ofelia (backups)
+      - ofelia.enabled=true
+      - ofelia.job-exec.vault-daily.schedule=0 2 * * *
+      - ofelia.job-exec.vault-daily.command=/scripts/raft-snapshot.sh daily
+      - ofelia.job-exec.vault-daily.container=${STACK_NAME_PREFIX:-homelab}-vault
+      - ofelia.job-exec.vault-weekly.schedule=0 3 * * 7
+      - ofelia.job-exec.vault-weekly.command=/scripts/raft-snapshot.sh weekly
+      - ofelia.job-exec.vault-weekly.container=${STACK_NAME_PREFIX:-homelab}-vault
+      - ofelia.job-exec.vault-monthly.schedule=0 4 1 * *
+      - ofelia.job-exec.vault-monthly.command=/scripts/raft-snapshot.sh monthly
+      - ofelia.job-exec.vault-monthly.container=${STACK_NAME_PREFIX:-homelab}-vault
+    ports:
+      - "${VAULT_PORT:-8220}:8200"
+    env_file:
+      - ../../.env.vault
+    volumes:
+      - vault_raft:/vault/raft
+      - vault_audit:/vault/audit
+      - ${VAULT_BACKUP_HOST_DIR}:/backups
+      - ${VAULT_CRON_STATUS_HOST_DIR}:/cron-status
+      - ./vault.hcl:/vault/config/vault.hcl:ro
+      - ./scripts:/scripts:ro
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - traefik
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  vault_raft:
+  vault_audit:

@@ -1,50 +1,47 @@
-version: "3.8"
-
 services:
   traefik:
-    image: traefik:v3.1
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    ports:
-      - 80:80
-      - 443:443
-      # - 443:443/tcp # Uncomment if you want HTTP3
-      # - 443:443/udp # Uncomment if you want HTTP3
+    image: traefik:latest
+    container_name: ${STACK_NAME_PREFIX}-traefik
     env_file:
-      - ../../.env
-      # - .homelab/.env
-    environment:
-      CF_DNS_API_TOKEN_FILE: /run/secrets/cloudflare_api_token
-    secrets:
-      - cloudflare_api_token
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yml:/traefik.yml:ro
-      - ./.homelab/acme.json:/acme.json
-      # - ./config.yml:/config.yml:ro
+      - ../../.env.traefik
     labels:
-      - homepage.group=Network
+      - homepage.group=Infrastructure
       - homepage.name=Traefik
       - homepage.icon=traefik.png
-      - homepage.href=https://traefik.${HOMELAB_DOMAIN}
-      - homepage.widget.type=traefik
-      - homepage.widget.url=https://traefik.${HOMELAB_DOMAIN}
+      - homepage.href=https://traefik.${BASE_DOMAIN}
+      - homepage.description=Reverse proxy & load balancer
+      # Traefik self-discovery
       - traefik.enable=true
-      - traefik.http.routers.traefik.entrypoints=http
-      - traefik.http.routers.traefik.rule=Host(`traefik.${HOMELAB_DOMAIN}`)
-      - traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https
-      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
-      - traefik.http.routers.traefik.middlewares=traefik-https-redirect
-      - traefik.http.routers.traefik-secure.entrypoints=https
-      - traefik.http.routers.traefik-secure.rule=Host(`traefik.${HOMELAB_DOMAIN}`)
-      - traefik.http.routers.traefik-secure.tls=true
-      - traefik.http.routers.traefik-secure.tls.certresolver=cloudflare
-      - traefik.http.routers.traefik-secure.tls.domains[0].main=${HOMELAB_DOMAIN}
-      - traefik.http.routers.traefik-secure.tls.domains[0].sans=*.${HOMELAB_DOMAIN}
-      - traefik.http.routers.traefik-secure.service=api@internal
+      - traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${BASE_DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard.entrypoints=websecure
+      - traefik.http.routers.traefik-dashboard.tls.certresolver=cloudflare
+      - traefik.http.routers.traefik-dashboard.service=api@internal
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+      - traefik_certs:/letsencrypt
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+      - DOCKER_API_VERSION=1.44
+    command:
+      - "--certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}"
+    networks:
+      - traefik
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
-secrets:
-  cloudflare_api_token:
-    file: ./.homelab/cloudflare-api-token.txt
+networks:
+  traefik:
+    external: true
+
+volumes:
+  traefik_certs:
