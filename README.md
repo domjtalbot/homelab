@@ -48,6 +48,7 @@ Here's what I'm currently running. Each service links to its own README with set
 |---------|-------------|----------|
 | [Homepage](services/homepage/) | Modern dashboard with service auto-discovery | Infrastructure |
 | [Traefik](services/traefik/) | Reverse proxy with automatic SSL certificates | Infrastructure |
+| [ChangeDetection](services/changedetection/) | Website change monitoring with JS support | Monitoring |
 | [n8n](services/n8n/) | Workflow automation platform | Automation |
 | [Open WebUI](services/open-webui/) | Chat interface for Ollama and LLMs | AI |
 | [Linkwarden](services/linkwarden/) | Collaborative bookmark manager | Tools |
