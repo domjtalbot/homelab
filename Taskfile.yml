@@ -100,6 +100,33 @@ tasks:
       - docker ps --filter "name={{.STACK_NAME_PREFIX}}" --format 'table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Ports}}`}}'
 
   #
+  # Security Commands
+  # These scan the repo for secrets before sharing or publishing
+  #
+
+  secrets:scan:
+    desc: Scan repo for secrets with gitleaks
+    cmds:
+      - |
+        if ! command -v gitleaks >/dev/null 2>&1; then
+          echo "gitleaks not found. Install it and re-run."
+          exit 1
+        fi
+        gitleaks detect --source . --redact
+
+  secrets:hooks:
+    desc: Enable gitleaks pre-commit hook for this repo
+    cmds:
+      - |
+        if ! command -v gitleaks >/dev/null 2>&1; then
+          echo "gitleaks not found. Install it and re-run."
+          exit 1
+        fi
+        git config core.hooksPath .githooks
+        echo "✓ core.hooksPath set to .githooks"
+        echo "✓ gitleaks pre-commit hook enabled"
+
+  #
   # Environment Management
   # These tasks handle .env file creation and validation
   #
@@ -133,7 +160,7 @@ tasks:
         done
 
   init:
-    desc: Initialize all .env files (with prompts)
+    desc: Initialize env files and enable gitleaks pre-commit hook
     cmds:
       - |
         if [ -f .env.example ]; then
@@ -157,6 +184,7 @@ tasks:
             fi
           fi
         done
+      - task: secrets:hooks
 
   #
   # Internal Tasks

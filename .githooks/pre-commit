@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks not found. Install it and re-run (or disable hooks)." >&2
+  exit 1
+fi
+
+# Scan staged changes only to keep commits fast and focused.
+git diff --cached --no-color | gitleaks stdin --redact --no-banner

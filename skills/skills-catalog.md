@@ -32,3 +32,9 @@ This is the single source of truth for repo AI skills.
 - **Purpose**: Sanitize env files and remove secrets.
 - **Trigger phrases**: "check env files", "remove secrets", "validate env examples"
 - **Path**: `skills/env-hygiene/`
+
+## secret-scan
+
+- **Purpose**: Scan the repo for secrets using gitleaks and help triage results.
+- **Trigger phrases**: "scan for secrets", "run gitleaks", "secret scan"
+- **Path**: `skills/secret-scan/`

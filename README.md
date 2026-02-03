@@ -18,21 +18,25 @@ This is my homelab — a collection of self-hosted services running on Docker Co
 
 ## Prerequisites
 
-This project uses [Task](https://taskfile.dev) for task automation. You'll need to install it globally:
+Install global tooling with Homebrew:
 
-**macOS:**
 ```bash
-brew install go-task
+brew install go-task gitleaks git-filter-repo
 ```
 
-**Linux:**  
-See the [official installation guide](https://taskfile.dev/installation/)
+- `go-task`: run the homelab commands (`task up`, `task down`, `task logs`, etc.)
+- `gitleaks`: scan for secrets (`task secrets:scan`) and power pre-commit checks (`task secrets:hooks`)
+- `git-filter-repo`: clean leaked secrets from old git history when needed
+
+After cloning, run `task init` once to create env files and enable the gitleaks pre-commit hook.
 
 ### What makes it work
 
-Adding new services should be quick and easy right? the setup is design to get up and running quickly, by simply adding a new docker compose file. new services automaticslly get assigned valid HTTPS with Lets encrypt via Traefik, automatically added to the homepage dashboard. the Taskfile allows easy interaction.
+Adding new services should be quick and easy. This setup is designed to get you running fast by simply adding a new Docker Compose file.
 
-The setup is plug-and-play — you can add new services without touching the Taskfile. Traefik handles reverse proxy and automatic HTTPS with Let's Encrypt. There's a Homepage dashboard that auto-discovers all your services, and everything runs natively in Docker containers.
+New services automatically get HTTPS via Traefik (Let's Encrypt), and they appear in Homepage for visibility. The Taskfile keeps day-to-day operations simple with consistent commands.
+
+The stack is intentionally plug-and-play: add services without changing the root Taskfile, keep each service self-contained, and manage everything through Docker.
 
 
 
@@ -48,7 +52,7 @@ Here's what I'm currently running. Each service links to its own README with set
 | [Open WebUI](services/open-webui/) | Chat interface for Ollama and LLMs | AI |
 | [Linkwarden](services/linkwarden/) | Collaborative bookmark manager | Tools |
 | [MeTube](services/metube/) | YouTube video downloader | Media |
-| [Tdarr](services/tdarr/) | media transcoding | Media |
+| [Tdarr](services/tdarr/) | Media transcoding | Media |
 | [Web-Check](services/web-check/) | Website analysis toolkit | Tools |
 | [Tugtainer](services/tugtainer/) | Docker container update automation | Infrastructure |
 | [Wyoming Faster Whisper](services/wyoming-faster-whisper/) | Speech-to-text server | AI |
@@ -64,12 +68,14 @@ I use Task to make managing my services easier: from wrapping docker commands, t
 | `task check-env` | Validate environment files | `task check-env` |
 | `task clean` | Remove all homelab resources | `task clean` |
 | `task down` | Stop all or a specific service | `task down SERVICE=homepage` |
-| `task init` | Initialize environment files | `task init` |
+| `task init` | Initialize env files and enable pre-commit hook | `task init` |
 | `task logs` | View logs (follows) | `task logs SERVICE=traefik` |
 | `task prune` | Remove unused containers/images | `task prune` |
 | `task ps` | Show container status | `task ps SERVICE=homepage` |
 | `task restart` | Restart a service | `task restart SERVICE=n8n` |
+| `task secrets:scan` | Scan repo for secrets (requires gitleaks) | `task secrets:scan` |
+| `task secrets:hooks` | Enable gitleaks pre-commit hook | `task secrets:hooks` |
 | `task status` | Show all homelab containers | `task status` |
 | `task up` | Start all or a specific service | `task up SERVICE=homepage` |
 
-> All commands are designed to work with either all services at once or a signle service. If you don't specify a `SERVICE`, the command will apply to all services.
+> All commands are designed to work with either all services at once or a single service. If you don't specify a `SERVICE`, the command applies to all services.
