@@ -38,3 +38,9 @@ This is the single source of truth for repo AI skills.
 - **Purpose**: Scan the repo for secrets using gitleaks and help triage results.
 - **Trigger phrases**: "scan for secrets", "run gitleaks", "secret scan"
 - **Path**: `skills/secret-scan/`
+
+## service-removal
+
+- **Purpose**: Remove a service from the repo and Docker runtime safely.
+- **Trigger phrases**: "remove a service", "delete a service", "decommission a service"
+- **Path**: `skills/service-removal/`
